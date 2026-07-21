@@ -30,6 +30,8 @@ const Login = ({ setAuthToken }) => {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
 
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
   // Trigger Google Login
   const handleGoogleClick = () => {
     setShowMockGoogleSelector(true)
