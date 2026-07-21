@@ -5,13 +5,12 @@ services:
     env: docker
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
-    region: singapore
     plan: free
     envVars:
       - key: PORT
-        value: 8080
+        value: "8080"
       - key: MOCK_AI
-        value: true
+        value: "true"
       - key: FRONTEND_URL
         value: https://saas-grid-frontend.onrender.com
 
@@ -21,7 +20,6 @@ services:
     env: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
-    region: singapore
     plan: free
     routes:
       - type: rewrite
