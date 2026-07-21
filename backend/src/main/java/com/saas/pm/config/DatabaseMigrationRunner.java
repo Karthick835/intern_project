@@ -31,6 +31,14 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         try (Connection connection = dataSource.getConnection();
              Statement stmt = connection.createStatement()) {
 
+            // Ensure public.tenants has owner_email column (automated migration)
+            try {
+                stmt.executeUpdate("ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(100)");
+                log.info("Successfully checked/added owner_email column to public.tenants.");
+            } catch (Exception e) {
+                log.warn("Could not auto-migrate public.tenants table (might already be up to date): {}", e.getMessage());
+            }
+
             // Check if tenants table exists in public schema
             boolean tenantsTableExists = false;
             try {
