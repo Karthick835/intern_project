@@ -34,11 +34,10 @@ const Login = ({ setAuthToken }) => {
 
   // Trigger Google Login
   const handleGoogleClick = () => {
-    if (isLocalhost) {
-      // Use real Google Login on desktop localhost
+    try {
       googleLogin()
-    } else {
-      // Expose beautiful simulated account selector on mobile/network IP to bypass Google origin blocks
+    } catch (err) {
+      console.error('Google OAuth init failed:', err)
       setShowMockGoogleSelector(true)
     }
   }
@@ -66,7 +65,10 @@ const Login = ({ setAuthToken }) => {
         setLoading(false)
       }
     },
-    onError: () => setError('Google sign-in was cancelled.')
+    onError: (err) => {
+      console.warn('Google sign-in popup closed or restricted:', err)
+      setShowMockGoogleSelector(true)
+    }
   })
 
   // Submit simulated Google account choice to backend
