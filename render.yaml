@@ -14,7 +14,7 @@ services:
       - key: FRONTEND_URL
         value: https://saas-grid-frontend.onrender.com
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://dpg-d9fqr99kh4rs73d0qj2g-a.oregon-postgres.render.com:5432/saas_pm
+        value: jdbc:postgresql://dpg-d9fqr99kh4rs73d0qj2g-a:5432/saas_pm
       - key: SPRING_DATASOURCE_USERNAME
         value: saas_pm_user
       - key: SPRING_DATASOURCE_PASSWORD
