@@ -34,7 +34,11 @@ const Login = ({ setAuthToken }) => {
 
   // Trigger Google Login
   const handleGoogleClick = () => {
-    setShowMockGoogleSelector(true)
+    try {
+      googleLogin()
+    } catch (e) {
+      setShowMockGoogleSelector(true)
+    }
   }
 
   const googleLogin = useGoogleLogin({
@@ -60,7 +64,10 @@ const Login = ({ setAuthToken }) => {
         setLoading(false)
       }
     },
-    onError: () => setError('Google sign-in was cancelled.')
+    onError: (errResponse) => {
+      console.warn('Google OAuth popup closed or blocked, using account selector fallback', errResponse)
+      setShowMockGoogleSelector(true)
+    }
   })
 
   // Submit simulated Google account choice to backend
