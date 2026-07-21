@@ -43,6 +43,7 @@ const Login = ({ setAuthToken }) => {
   }
 
   const googleLogin = useGoogleLogin({
+    prompt: 'select_account',
     onSuccess: async (tokenResponse) => {
       setLoading(true)
       setError('')
