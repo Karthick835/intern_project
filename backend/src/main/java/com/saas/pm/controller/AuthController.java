@@ -184,98 +184,132 @@ public class AuthController {
 
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> body) {
-        String accessToken = body.get("idToken"); // reusing idToken field for access token
-        String emailFromFrontend = body.get("email");
-        String nameFromFrontend  = body.get("name");
+        try {
+            String accessToken = body.get("idToken"); // reusing idToken field for access token
+            String emailFromFrontend = body.get("email");
+            String nameFromFrontend  = body.get("name");
 
-        if (accessToken == null || accessToken.isBlank()) {
-            return ResponseEntity.badRequest().body("Missing Google token.");
-        }
-
-        // Verify email from frontend or Google userinfo endpoint
-        String email = emailFromFrontend;
-        String name = nameFromFrontend != null && !nameFromFrontend.isBlank() ? nameFromFrontend : (email != null ? email.split("@")[0] : "Google User");
-
-        if ((email == null || email.isBlank()) && accessToken != null && !"mock-google-token".equals(accessToken)) {
-            try {
-                RestTemplate restTemplate = new RestTemplate();
-                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-                headers.setBearerAuth(accessToken);
-                org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-                org.springframework.http.ResponseEntity<Map> googleResp = restTemplate.exchange(
-                    "https://www.googleapis.com/oauth2/v3/userinfo",
-                    org.springframework.http.HttpMethod.GET,
-                    entity,
-                    Map.class
-                );
-                Map<String, Object> userInfo = googleResp.getBody();
-                if (userInfo != null) {
-                    email = (String) userInfo.get("email");
-                    name  = (String) userInfo.getOrDefault("name", name);
-                }
-            } catch (Exception e) {
-                log.error("Google token verification fallback error: {}", e.getMessage());
+            if (accessToken == null || accessToken.isBlank()) {
+                return ResponseEntity.badRequest().body("Missing Google token.");
             }
-        }
 
-        if (email == null || email.isBlank()) {
-            return ResponseEntity.status(401).body("Could not retrieve email from Google.");
-        }
+            // Verify email from frontend or Google userinfo endpoint
+            String email = emailFromFrontend;
+            String name = nameFromFrontend != null && !nameFromFrontend.isBlank() ? nameFromFrontend : (email != null ? email.split("@")[0] : "Google User");
 
-        String cleanEmail = email.trim().toLowerCase();
+            if ((email == null || email.isBlank()) && accessToken != null && !"mock-google-token".equals(accessToken)) {
+                try {
+                    RestTemplate restTemplate = new RestTemplate();
+                    org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                    headers.setBearerAuth(accessToken);
+                    org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+                    org.springframework.http.ResponseEntity<Map> googleResp = restTemplate.exchange(
+                        "https://www.googleapis.com/oauth2/v3/userinfo",
+                        org.springframework.http.HttpMethod.GET,
+                        entity,
+                        Map.class
+                    );
+                    Map<String, Object> userInfo = googleResp.getBody();
+                    if (userInfo != null) {
+                        email = (String) userInfo.get("email");
+                        name  = (String) userInfo.getOrDefault("name", name);
+                    }
+                } catch (Exception e) {
+                    log.error("Google token verification fallback error: {}", e.getMessage());
+                }
+            }
 
-        // 1. Direct lookup by owner email
-        Optional<Tenant> existingTenantOpt = tenantRepository.findByOwnerEmail(cleanEmail);
-        if (existingTenantOpt.isPresent()) {
-            Tenant tenant = existingTenantOpt.get();
-            String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
-            String userName = (userData != null && userData.length > 3 && userData[3] != null) ? userData[3] : (name != null ? name : cleanEmail);
-            String userRole = (userData != null && userData.length > 4 && userData[4] != null) ? userData[4] : "ROLE_NONE";
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.status(401).body("Could not retrieve email from Google.");
+            }
 
-            String token = jwtUtils.generateJwtToken(cleanEmail, userName, userRole, tenant.getId());
-            LoginResponse response = LoginResponse.builder()
-                    .token(token)
-                    .email(cleanEmail)
-                    .name(userName)
-                    .role(userRole)
-                    .tenantId(tenant.getId())
-                    .subdomain(tenant.getSubdomain())
-                    .plan(tenant.getPlan())
-                    .build();
-            log.info("Google login successful for owner {} in workspace {}", cleanEmail, tenant.getSubdomain());
-            return ResponseEntity.ok(response);
-        }
+            String cleanEmail = email.trim().toLowerCase();
 
-        // 2. Search all tenant schemas for user email
-        List<Tenant> allTenants = tenantRepository.findAll();
-        for (Tenant tenant : allTenants) {
+            // Self-healing database check: if tenants table doesn't have owner_email, dynamically alter it
             try {
-                String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
-                if (userData != null) {
-                    String token = jwtUtils.generateJwtToken(
-                            userData[1], userData[3], userData[4], tenant.getId());
+                Optional<Tenant> existingTenantOpt = tenantRepository.findByOwnerEmail(cleanEmail);
+                if (existingTenantOpt.isPresent()) {
+                    Tenant tenant = existingTenantOpt.get();
+                    String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
+                    String userName = (userData != null && userData.length > 3 && userData[3] != null) ? userData[3] : (name != null ? name : cleanEmail);
+                    String userRole = (userData != null && userData.length > 4 && userData[4] != null) ? userData[4] : "ROLE_NONE";
+
+                    String token = jwtUtils.generateJwtToken(cleanEmail, userName, userRole, tenant.getId());
                     LoginResponse response = LoginResponse.builder()
                             .token(token)
-                            .email(userData[1])
-                            .name(userData[3])
-                            .role(userData[4])
+                            .email(cleanEmail)
+                            .name(userName)
+                            .role(userRole)
                             .tenantId(tenant.getId())
                             .subdomain(tenant.getSubdomain())
                             .plan(tenant.getPlan())
                             .build();
-                    log.info("Google login successful for {} in tenant {}", cleanEmail, tenant.getSubdomain());
+                    log.info("Google login successful for owner {} in workspace {}", cleanEmail, tenant.getSubdomain());
                     return ResponseEntity.ok(response);
                 }
-            } catch (Exception ignored) {}
-        }
+            } catch (Exception dbEx) {
+                log.warn("Database column mismatch detected. Attempting dynamic self-healing of public.tenants schema...", dbEx);
+                try {
+                    tenantSchemaService.addColumnToTable("public.tenants", "owner_email", "VARCHAR(100)");
+                    log.info("Self-healing complete. Retrying query...");
+                    Optional<Tenant> existingTenantOpt = tenantRepository.findByOwnerEmail(cleanEmail);
+                    if (existingTenantOpt.isPresent()) {
+                        Tenant tenant = existingTenantOpt.get();
+                        String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
+                        String userName = (userData != null && userData.length > 3 && userData[3] != null) ? userData[3] : (name != null ? name : cleanEmail);
+                        String userRole = (userData != null && userData.length > 4 && userData[4] != null) ? userData[4] : "ROLE_NONE";
 
-        // New user — ask them to set up their workspace
-        log.info("New Google user: {} — needs workspace setup", cleanEmail);
-        return ResponseEntity.status(202).body(Map.of(
-                "needsWorkspace", true,
-                "email", cleanEmail,
-                "name", name != null ? name : cleanEmail
-        ));
+                        String token = jwtUtils.generateJwtToken(cleanEmail, userName, userRole, tenant.getId());
+                        LoginResponse response = LoginResponse.builder()
+                                .token(token)
+                                .email(cleanEmail)
+                                .name(userName)
+                                .role(userRole)
+                                .tenantId(tenant.getId())
+                                .subdomain(tenant.getSubdomain())
+                                .plan(tenant.getPlan())
+                                .build();
+                        return ResponseEntity.ok(response);
+                    }
+                } catch (Exception alterEx) {
+                    log.error("Failed to dynamically self-heal tenants table", alterEx);
+                }
+            }
+
+            // 2. Search all tenant schemas for user email
+            List<Tenant> allTenants = tenantRepository.findAll();
+            for (Tenant tenant : allTenants) {
+                try {
+                    String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
+                    if (userData != null) {
+                        String token = jwtUtils.generateJwtToken(
+                                userData[1], userData[3], userData[4], tenant.getId());
+                        LoginResponse response = LoginResponse.builder()
+                                .token(token)
+                                .email(userData[1])
+                                .name(userData[3])
+                                .role(userData[4])
+                                .tenantId(tenant.getId())
+                                .subdomain(tenant.getSubdomain())
+                                .plan(tenant.getPlan())
+                                .build();
+                        log.info("Google login successful for {} in tenant {}", cleanEmail, tenant.getSubdomain());
+                        return ResponseEntity.ok(response);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // New user — ask them to set up their workspace
+            log.info("New Google user: {} — needs workspace setup", cleanEmail);
+            return ResponseEntity.status(202).body(Map.of(
+                    "needsWorkspace", true,
+                    "email", cleanEmail,
+                    "name", name != null ? name : cleanEmail
+            ));
+        } catch (Exception globalEx) {
+            log.error("Unhandled exception in googleLogin endpoint", globalEx);
+            return ResponseEntity.status(500).body("Internal authentication error: " + globalEx.getMessage());
+        }
     }
 
     @PostMapping("/google/setup")

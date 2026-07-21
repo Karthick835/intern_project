@@ -215,4 +215,16 @@ public class TenantSchemaService {
             throw new RuntimeException("Failed to find user", e);
         }
     }
+
+    public void addColumnToTable(String tableName, String columnName, String columnType) {
+        String sql = "ALTER TABLE " + tableName + " ADD COLUMN IF NOT EXISTS " + columnName + " " + columnType;
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(sql);
+            log.info("Successfully executed: {}", sql);
+        } catch (SQLException e) {
+            log.error("Failed to execute: " + sql, e);
+            throw new RuntimeException("Failed to add column " + columnName + " to table " + tableName, e);
+        }
+    }
 }
