@@ -35,16 +35,26 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
         try {
             String tenantStr = tenantIdentifier != null ? tenantIdentifier.toString() : "PUBLIC";
             String sanitizedTenant = tenantStr.replaceAll("[^a-zA-Z0-9_]", "");
+            boolean isPostgres = connection.getMetaData().getDatabaseProductName().toLowerCase().contains("postgres");
+            
             try (Statement stmt = connection.createStatement()) {
                 if (sanitizedTenant.equalsIgnoreCase("public") || sanitizedTenant.equalsIgnoreCase("default")) {
-                    // Ensure PUBLIC schema exists and switch to it
-                    stmt.execute("CREATE SCHEMA IF NOT EXISTS PUBLIC");
-                    stmt.execute("SET SCHEMA PUBLIC");
+                    if (isPostgres) {
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS public");
+                        stmt.execute("SET search_path TO public");
+                    } else {
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS PUBLIC");
+                        stmt.execute("SET SCHEMA PUBLIC");
+                    }
                 } else {
-                    // Create tenant schema if it doesn't exist, then switch
                     String schemaName = "tenant_" + sanitizedTenant;
-                    stmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
-                    stmt.execute("SET SCHEMA " + schemaName);
+                    if (isPostgres) {
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+                        stmt.execute("SET search_path TO " + schemaName);
+                    } else {
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+                        stmt.execute("SET SCHEMA " + schemaName);
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -57,9 +67,13 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
     @Override
     public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {
         try {
+            boolean isPostgres = connection.getMetaData().getDatabaseProductName().toLowerCase().contains("postgres");
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute("CREATE SCHEMA IF NOT EXISTS PUBLIC");
-                stmt.execute("SET SCHEMA PUBLIC");
+                if (isPostgres) {
+                    stmt.execute("SET search_path TO public");
+                } else {
+                    stmt.execute("SET SCHEMA PUBLIC");
+                }
             }
         } catch (SQLException e) {
             // Ignore reset failures
