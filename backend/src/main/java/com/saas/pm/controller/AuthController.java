@@ -222,11 +222,35 @@ public class AuthController {
             return ResponseEntity.status(401).body("Could not retrieve email from Google.");
         }
 
-        // Search all tenants for existing user with this email
+        String cleanEmail = email.trim().toLowerCase();
+
+        // 1. Direct lookup by owner email
+        Optional<Tenant> existingTenantOpt = tenantRepository.findByOwnerEmail(cleanEmail);
+        if (existingTenantOpt.isPresent()) {
+            Tenant tenant = existingTenantOpt.get();
+            String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
+            String userName = (userData != null && userData.length > 3 && userData[3] != null) ? userData[3] : (name != null ? name : cleanEmail);
+            String userRole = (userData != null && userData.length > 4 && userData[4] != null) ? userData[4] : "ROLE_NONE";
+
+            String token = jwtUtils.generateJwtToken(cleanEmail, userName, userRole, tenant.getId());
+            LoginResponse response = LoginResponse.builder()
+                    .token(token)
+                    .email(cleanEmail)
+                    .name(userName)
+                    .role(userRole)
+                    .tenantId(tenant.getId())
+                    .subdomain(tenant.getSubdomain())
+                    .plan(tenant.getPlan())
+                    .build();
+            log.info("Google login successful for owner {} in workspace {}", cleanEmail, tenant.getSubdomain());
+            return ResponseEntity.ok(response);
+        }
+
+        // 2. Search all tenant schemas for user email
         List<Tenant> allTenants = tenantRepository.findAll();
         for (Tenant tenant : allTenants) {
             try {
-                String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), email);
+                String[] userData = tenantSchemaService.findUserByEmail(tenant.getId(), cleanEmail);
                 if (userData != null) {
                     String token = jwtUtils.generateJwtToken(
                             userData[1], userData[3], userData[4], tenant.getId());
@@ -239,18 +263,18 @@ public class AuthController {
                             .subdomain(tenant.getSubdomain())
                             .plan(tenant.getPlan())
                             .build();
-                    log.info("Google login successful for {} in tenant {}", email, tenant.getSubdomain());
+                    log.info("Google login successful for {} in tenant {}", cleanEmail, tenant.getSubdomain());
                     return ResponseEntity.ok(response);
                 }
             } catch (Exception ignored) {}
         }
 
         // New user — ask them to set up their workspace
-        log.info("New Google user: {} — needs workspace setup", email);
+        log.info("New Google user: {} — needs workspace setup", cleanEmail);
         return ResponseEntity.status(202).body(Map.of(
                 "needsWorkspace", true,
-                "email", email,
-                "name", name
+                "email", cleanEmail,
+                "name", name != null ? name : cleanEmail
         ));
     }
 
@@ -261,14 +285,12 @@ public class AuthController {
         String companyName = body.get("companyName");
         String subdomain   = body.get("subdomain");
         String plan        = body.getOrDefault("plan", "FREE");
-        // Validate plan value
-        if (!plan.equals("FREE") && !plan.equals("PRO") && !plan.equals("ENTERPRISE")) {
-            plan = "FREE";
-        }
 
         if (email == null || companyName == null || subdomain == null) {
             return ResponseEntity.badRequest().body("Missing required fields.");
         }
+
+        String cleanEmail = email.trim().toLowerCase();
 
         subdomain = subdomain.toLowerCase().replaceAll("[^a-z0-9]", "");
         if (subdomain.isBlank()) {
@@ -283,6 +305,7 @@ public class AuthController {
                 .id(tenantId)
                 .name(companyName)
                 .subdomain(subdomain)
+                .ownerEmail(cleanEmail)
                 .plan(plan)
                 .build();
         tenantRepository.save(newTenant);
@@ -299,20 +322,20 @@ public class AuthController {
         tenantSchemaService.createTenantSchema(tenantId);
         String adminId   = UUID.randomUUID().toString();
         String randomPwd = passwordEncoder.encode(UUID.randomUUID().toString());
-        tenantSchemaService.saveTenantUser(tenantId, adminId, email, randomPwd, name != null ? name : email, "ROLE_NONE");
+        tenantSchemaService.saveTenantUser(tenantId, adminId, cleanEmail, randomPwd, name != null ? name : cleanEmail, "ROLE_NONE");
 
-        String token = jwtUtils.generateJwtToken(email, name != null ? name : email, "ROLE_NONE", tenantId);
+        String token = jwtUtils.generateJwtToken(cleanEmail, name != null ? name : cleanEmail, "ROLE_NONE", tenantId);
         LoginResponse response = LoginResponse.builder()
                 .token(token)
-                .email(email)
-                .name(name != null ? name : email)
+                .email(cleanEmail)
+                .name(name != null ? name : cleanEmail)
                 .role("ROLE_NONE")
                 .tenantId(tenantId)
                 .subdomain(subdomain)
-                .plan("PRO")
+                .plan(plan)
                 .build();
 
-        log.info("Workspace '{}' created for Google user {} (assigned ROLE_NONE)", subdomain, email);
+        log.info("Workspace '{}' created for Google owner {}", subdomain, cleanEmail);
         return ResponseEntity.ok(response);
     }
 }
