@@ -14,13 +14,12 @@ services:
       - key: FRONTEND_URL
         value: https://saas-grid-frontend.onrender.com
 
-  # Frontend Web Service (Vite React)
+  # Frontend Static Web App (Vite React)
   - type: web
     name: saas-grid-frontend
     env: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
-    plan: free
     routes:
       - type: rewrite
         source: /*
