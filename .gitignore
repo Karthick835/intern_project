@@ -1,0 +1,20 @@
+# Node / React
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.env.local
+
+# Java / Maven
+target/
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+.DS_Store
+
+# Local DB & logs
+db/
+*.log
+.idea/
+.vscode/

@@ -1,0 +1,96 @@
+spring:
+  profiles:
+    active: default
+  application:
+    name: pm-tool
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: pappumay5@gmail.com
+    password: tryhuyyi jcemgjdp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_dummy}
+
+
+---
+# Default Profile - H2 In-Memory Database (for easy development/testing)
+spring:
+  config:
+    activate:
+      on-profile: default
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: jdbc:h2:file:./db/saas_pm;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE SCHEMA IF NOT EXISTS PUBLIC\;SET SCHEMA PUBLIC
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # Enable multi-tenancy emulation on H2 via schema
+        multiTenancy: SCHEMA
+
+# JWT and AI configurations
+app:
+  jwt:
+    secret: 9a4f2c8d3e1b7f0a5c8e2d4b6a8f0e1c3d5b7a9e0f2c4a6b8d0e2f4a6b8c0d1e2f3
+    expiration-ms: 86400000 # 24 hours
+  frontend-url: ${FRONTEND_URL:http://192.168.1.7:8888}
+  ai:
+    claude-api-key: ${CLAUDE_API_KEY:}
+    use-mock: ${MOCK_AI:false}
+
+server:
+  port: ${PORT:8080}
+
+---
+# Postgres & Redis Profile - Production/Docker environment
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/saas_pm
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none # Schemas managed dynamically or via migration scripts
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+app:
+  jwt:
+    secret: 9a4f2c8d3e1b7f0a5c8e2d4b6a8f0e1c3d5b7a9e0f2c4a6b8d0e2f4a6b8c0d1e2f3
+    expiration-ms: 86400000
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  ai:
+    claude-api-key: ${CLAUDE_API_KEY:}
+    use-mock: ${MOCK_AI:false}
+
+server:
+  port: 8080
