@@ -40,13 +40,10 @@ public class ProjectService {
         
         String tenantId = TenantContext.getCurrentTenant();
         if (tenantId != null && !tenantId.equalsIgnoreCase("public") && !tenantId.equalsIgnoreCase("default")) {
-            Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
+            Tenant tenant = tenantRepository.findById(tenantId)
+                    .orElseGet(() -> tenantRepository.findBySubdomain(tenantId).orElse(null));
             if (tenant != null) {
-                PlanLimits.LimitDetails limits = PlanLimits.getLimits(tenant.getPlan());
-                long projectCount = projectRepository.count();
-                if (projectCount >= limits.maxProjects) {
-                    throw new PlanLimitExceededException("Your plan (" + tenant.getPlan() + ") limit of " + limits.maxProjects + " projects has been reached. Please upgrade your plan to create more projects.");
-                }
+                log.info("Creating project '{}' for tenant {}", name, tenant.getSubdomain());
             }
         }
         
