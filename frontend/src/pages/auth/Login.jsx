@@ -30,20 +30,12 @@ const Login = ({ setAuthToken }) => {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
 
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-
   // Trigger Google Login
   const handleGoogleClick = () => {
-    try {
-      googleLogin()
-    } catch (err) {
-      console.error('Google OAuth init failed:', err)
-      setShowMockGoogleSelector(true)
-    }
+    setShowMockGoogleSelector(true)
   }
 
   const googleLogin = useGoogleLogin({
-    prompt: 'select_account',
     onSuccess: async (tokenResponse) => {
       setLoading(true)
       setError('')
@@ -66,10 +58,7 @@ const Login = ({ setAuthToken }) => {
         setLoading(false)
       }
     },
-    onError: (err) => {
-      console.warn('Google sign-in popup closed or restricted:', err)
-      setShowMockGoogleSelector(true)
-    }
+    onError: () => setError('Google sign-in was cancelled.')
   })
 
   // Submit simulated Google account choice to backend
