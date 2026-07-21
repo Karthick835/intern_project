@@ -21,7 +21,7 @@ public class WikiDoc {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "updated_by")

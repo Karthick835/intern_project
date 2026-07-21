@@ -130,7 +130,7 @@ public class TenantSchemaService {
                     "id VARCHAR(50) PRIMARY KEY, " +
                     "tenant_id VARCHAR(50) NOT NULL, " +
                     "title VARCHAR(200) NOT NULL, " +
-                    "content CLOB, " +
+                    "content TEXT, " +
                     "updated_by VARCHAR(100), " +
                     "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 
