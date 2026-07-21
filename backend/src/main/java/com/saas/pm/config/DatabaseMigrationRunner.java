@@ -19,10 +19,19 @@ import java.util.UUID;
 public class DatabaseMigrationRunner implements CommandLineRunner {
 
     @Autowired
+    private org.springframework.core.env.Environment env;
+
+    @Autowired
     private TenantSchemaService tenantSchemaService;
 
     @Autowired
     private DataSource dataSource;
+
+    @jakarta.annotation.PostConstruct
+    public void initLog() {
+        String dbUrl = env.getProperty("spring.datasource.url");
+        log.info("🤖 [POST-CONSTRUCT] Configured Database URL: {}", dbUrl);
+    }
 
     @Override
     public void run(String... args) throws Exception {
