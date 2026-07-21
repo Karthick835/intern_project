@@ -42,20 +42,30 @@ const Login = ({ setAuthToken }) => {
       setLoading(true)
       setError('')
       try {
-        const userInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-        })
+        let email = ''
+        let name = ''
+        try {
+          const userInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+          })
+          email = userInfo.data?.email
+          name = userInfo.data?.name
+        } catch (uErr) {
+          console.warn('Direct Google userinfo fetch warning:', uErr)
+        }
 
         const res = await axios.post(`${getApiBase()}/auth/google`, {
           idToken: tokenResponse.access_token,
-          email: userInfo.data.email,
-          name: userInfo.data.name,
+          email: email,
+          name: name,
         })
 
         handleGoogleLoginSuccess(res)
       } catch (err) {
+        console.error('Google login error:', err)
         const d = err.response?.data
-        setError(typeof d === 'string' ? d : d?.message || 'Sign-in failed. Please try again.')
+        const detail = typeof d === 'string' ? d : (d?.message || err.message || 'Sign-in failed. Please try again.')
+        setError(detail)
       } finally {
         setLoading(false)
       }
