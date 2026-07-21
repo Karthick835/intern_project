@@ -13,6 +13,16 @@ services:
         value: "true"
       - key: FRONTEND_URL
         value: https://saas-grid-frontend.onrender.com
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://saas_pm_user:Gdbi0irak2RqqcOQUNLBcD1HkTqm6buM@dpg-d9fqr99kh4rs73d0qj2g-a/saas_pm
+      - key: SPRING_DATASOURCE_USERNAME
+        value: saas_pm_user
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: Gdbi0irak2RqqcOQUNLBcD1HkTqm6buM
+      - key: SPRING_DATASOURCE_DRIVER
+        value: org.postgresql.Driver
+      - key: SPRING_JPA_DIALECT
+        value: org.hibernate.dialect.PostgreSQLDialect
 
   # Frontend Static Web App (Vite React)
   - type: web
