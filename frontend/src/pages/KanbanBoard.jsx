@@ -149,7 +149,10 @@ const KanbanBoard = () => {
         status: columnId,
         projectId: selectedProjectId
       })
-      setTasks((prev) => [...prev, res.data])
+      setTasks((prev) => ({
+        ...prev,
+        [columnId]: [...(prev[columnId] || []), res.data]
+      }))
       setNewTaskTitle('')
       setActiveCreationColumn(null)
     } catch (err) {
