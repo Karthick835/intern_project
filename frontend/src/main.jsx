@@ -23,7 +23,7 @@ axios.create = function (...args) {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <GoogleOAuthProvider clientId="1001259680391-43pour5dkaepq3sgmk7hdjn2mvsvduqs.apps.googleusercontent.com">
+  <GoogleOAuthProvider clientId="1003207528404-5qlb2a8fv054q3d5db4vfkcsv9f10c3v.apps.googleusercontent.com">
     <App />
   </GoogleOAuthProvider>
 )
