@@ -74,20 +74,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow typical local dev servers and subdomains
+        // Allow local dev servers and cloud origins (onrender.com)
         configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:5173", 
-            "http://*.localhost:5173",
-            "http://localhost:3000",
-            "http://*.localhost:3000",
-            "http://localhost:8888",
-            "http://*.localhost:8888",
-            "http://192.168.*:8888",
-            "http://*.192.168.*:8888",
-            "http://10.*:8888",
-            "http://*.10.*:8888",
-            "http://172.*:8888",
-            "http://*.172.*:8888"
+            "http://localhost:*", 
+            "http://*.localhost:*",
+            "https://*.onrender.com",
+            "https://onrender.com",
+            "https://*",
+            "http://*"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID", "Cache-Control"));
