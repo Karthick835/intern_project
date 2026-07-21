@@ -36,16 +36,10 @@ public class JwtFilter extends OncePerRequestFilter {
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String email = jwtUtils.getUserNameFromJwtToken(jwt);
                 String tokenTenantId = jwtUtils.getTenantIdFromJwtToken(jwt);
-                String activeTenantId = TenantContext.getCurrentTenant();
 
-                // Cross-Tenant Security Check
-                if (tokenTenantId != null && !tokenTenantId.equalsIgnoreCase(activeTenantId) 
-                        && !activeTenantId.equalsIgnoreCase("public") && !activeTenantId.equalsIgnoreCase("default")) {
-                    log.warn("Cross-Tenant access violation: user {} belonging to tenant '{}' attempted access to tenant '{}'",
-                            email, tokenTenantId, activeTenantId);
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().write("Access Denied: Tenant workspace mismatch.");
-                    return;
+                // Align TenantContext securely with the verified JWT claims
+                if (tokenTenantId != null && !tokenTenantId.trim().isEmpty()) {
+                    TenantContext.setCurrentTenant(tokenTenantId);
                 }
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
