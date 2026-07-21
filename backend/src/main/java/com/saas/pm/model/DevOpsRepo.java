@@ -22,7 +22,7 @@ public class DevOpsRepo {
     
     private String lang;
     
-    @Column(length = 1000)
+    @Column(name = "description", length = 1000)
     private String desc;
     
     @Column(name = "created_at")

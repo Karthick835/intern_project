@@ -149,7 +149,7 @@ public class TenantSchemaService {
                     "tenant_id VARCHAR(50) NOT NULL, " +
                     "name VARCHAR(100) NOT NULL, " +
                     "lang VARCHAR(50), " +
-                    "desc VARCHAR(1000), " +
+                    "description VARCHAR(1000), " +
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 
                 connection.commit();
