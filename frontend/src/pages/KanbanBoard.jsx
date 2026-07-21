@@ -115,10 +115,13 @@ const KanbanBoard = () => {
     setSelectedTaskId(null)
   }
 
+  const [creatingProject, setCreatingProject] = useState(false)
+
   const handleCreateProject = async (e) => {
     e.preventDefault()
     if (!newProjectName.trim()) return
     try {
+      setCreatingProject(true)
       const res = await api.post('/projects', {
         name: newProjectName.trim(),
         description: newProjectDesc.trim(),
@@ -131,6 +134,10 @@ const KanbanBoard = () => {
       setNewProjectDesc('')
     } catch (err) {
       console.error('Failed to create project', err)
+      const d = err.response?.data
+      alert(typeof d === 'string' ? d : (d?.message || 'Failed to save project. Please try again.'))
+    } finally {
+      setCreatingProject(false)
     }
   }
 
@@ -142,16 +149,13 @@ const KanbanBoard = () => {
         status: columnId,
         projectId: selectedProjectId
       })
-      
-      setTasks((prev) => ({
-        ...prev,
-        [columnId]: [...prev[columnId], res.data]
-      }))
-      
+      setTasks((prev) => [...prev, res.data])
       setNewTaskTitle('')
       setActiveCreationColumn(null)
     } catch (err) {
       console.error('Failed to create task', err)
+      const d = err.response?.data
+      alert(typeof d === 'string' ? d : (d?.message || 'Failed to create task.'))
     }
   }
 
@@ -364,9 +368,11 @@ const KanbanBoard = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition text-sm font-semibold shadow"
+                    disabled={creatingProject}
+                    className="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition text-sm font-semibold shadow disabled:opacity-60 flex items-center gap-1.5"
                   >
-                    Save Project
+                    {creatingProject && <Loader className="w-3.5 h-3.5 animate-spin" />}
+                    {creatingProject ? 'Saving...' : 'Save Project'}
                   </button>
                 </div>
               </form>
