@@ -141,6 +141,28 @@ const KanbanBoard = () => {
     }
   }
 
+  const handleDeleteProject = async () => {
+    if (!selectedProjectId) return
+    const project = projects.find(p => p.id === selectedProjectId)
+    if (!project) return
+    if (!window.confirm(`Are you sure you want to delete the project "${project.name}"? This will archive the project and all its tasks.`)) return
+
+    try {
+      await api.delete(`/projects/${selectedProjectId}`)
+      const remaining = projects.filter(p => p.id !== selectedProjectId)
+      setProjects(remaining)
+      if (remaining.length > 0) {
+        setSelectedProjectId(remaining[0].id)
+      } else {
+        setSelectedProjectId('')
+        setTasks({ TO_DO: [], IN_PROGRESS: [], IN_REVIEW: [], DONE: [] })
+      }
+    } catch (err) {
+      console.error('Failed to delete project', err)
+      alert('Failed to delete project. Please try again.')
+    }
+  }
+
   const handleCreateTask = async (columnId) => {
     if (!newTaskTitle.trim() || !selectedProjectId) return
     try {
@@ -249,6 +271,16 @@ const KanbanBoard = () => {
             <Folder className="absolute left-3 top-3.5 w-3.5 h-3.5 text-slate-400" />
             <div className="absolute right-3 top-4 w-1.5 h-1.5 border-r border-b border-slate-500 transform rotate-45 pointer-events-none" />
           </div>
+
+          {selectedProjectId && (
+            <button
+              onClick={handleDeleteProject}
+              className="p-2.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-200 dark:border-slate-800 rounded-xl transition shadow-sm"
+              title="Delete current project"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
 
           <button
             onClick={() => setShowCreateProject(true)}

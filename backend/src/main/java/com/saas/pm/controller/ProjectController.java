@@ -57,7 +57,11 @@ public class ProjectController {
 
     @GetMapping
     public ResponseEntity<List<Project>> getAllProjects() {
-        return ResponseEntity.ok(projectRepository.findAll());
+        return ResponseEntity.ok(
+            projectRepository.findAll().stream()
+                .filter(p -> !"ARCHIVED".equalsIgnoreCase(p.getStatus()))
+                .collect(java.util.stream.Collectors.toList())
+        );
     }
 
     @GetMapping("/{id}")

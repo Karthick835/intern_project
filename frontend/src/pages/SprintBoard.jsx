@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Calendar, Play, CheckCircle2, Plus, Info, AlertCircle, Loader, FilePlus, Sparkles, X, Brain, Mic, Timer, Activity } from 'lucide-react'
+import { Calendar, Play, CheckCircle2, Plus, Info, AlertCircle, Loader, FilePlus, Sparkles, X, Brain, Mic, Timer, Activity, Trash2 } from 'lucide-react'
 import axios from 'axios'
 import { getApiBase } from '../config'
 import SprintHealthScore from '../components/SprintHealthScore'
@@ -122,6 +122,28 @@ const SprintBoard = () => {
       setEndDate('')
     } catch (err) {
       console.error('Failed to create sprint', err)
+    }
+  }
+
+  const handleDeleteSprint = async () => {
+    if (!selectedSprintId) return
+    const sprint = sprints.find(s => s.id === selectedSprintId)
+    if (!sprint) return
+    if (!window.confirm(`Are you sure you want to delete the sprint "${sprint.name}"? Tasks associated with this sprint will be moved back to the backlog.`)) return
+
+    try {
+      await api.delete(`/sprints/${selectedSprintId}`)
+      const remaining = sprints.filter(s => s.id !== selectedSprintId)
+      setSprints(remaining)
+      if (remaining.length > 0) {
+        setSelectedSprintId(remaining[0].id)
+      } else {
+        setSelectedSprintId('')
+        setSprintTasks([])
+      }
+    } catch (err) {
+      console.error('Failed to delete sprint', err)
+      alert('Failed to delete sprint. Please try again.')
     }
   }
 
@@ -257,6 +279,16 @@ const SprintBoard = () => {
             </select>
             <div className="absolute right-3 top-4 w-1.5 h-1.5 border-r border-b border-slate-500 transform rotate-45 pointer-events-none" />
           </div>
+
+          {selectedSprintId && (
+            <button
+              onClick={handleDeleteSprint}
+              className="p-2.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-200 dark:border-slate-800 rounded-xl transition shadow-sm"
+              title="Delete current sprint"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
 
           {/* AI Planner */}
           <motion.button

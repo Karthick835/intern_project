@@ -95,6 +95,11 @@ public class SprintService {
 
     public void deleteSprint(String sprintId) {
         log.info("Deleting sprint: {}", sprintId);
+        List<Task> tasks = taskRepository.findBySprintId(sprintId);
+        for (Task task : tasks) {
+            task.setSprint(null);
+            taskRepository.save(task);
+        }
         sprintRepository.deleteById(sprintId);
     }
 }
