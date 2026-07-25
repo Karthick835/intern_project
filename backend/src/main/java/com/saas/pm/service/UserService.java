@@ -20,12 +20,14 @@ import com.saas.pm.exception.PlanLimitExceededException;
 @Service
 @Slf4j
 public class UserService {
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
     private TenantRepository tenantRepository;
+
+    @Autowired
+    private TenantSchemaService tenantSchemaService;
 
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
@@ -35,8 +37,9 @@ public class UserService {
 
     public User createUser(String email, String password, String name, String role) {
         log.info("Creating user: {}", email);
-        
+
         String tenantId = TenantContext.getCurrentTenant();
+
         if (tenantId != null && !tenantId.equalsIgnoreCase("public") && !tenantId.equalsIgnoreCase("default")) {
             Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
             if (tenant != null) {
@@ -47,20 +50,24 @@ public class UserService {
                 }
             }
         }
-        
+
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("User with this email already exists");
         }
-        
-        User user = User.builder()
-                .id(UUID.randomUUID().toString())
+
+        String userId = UUID.randomUUID().toString();
+        String encodedPassword = passwordEncoder.encode(password);
+
+        // Save via reliable JDBC path (matches AuthController's approach), not raw JPA
+        tenantSchemaService.saveTenantUser(tenantId, userId, email, encodedPassword, name, role);
+
+        return User.builder()
+                .id(userId)
                 .email(email)
-                .password(passwordEncoder.encode(password))
+                .password(encodedPassword)
                 .name(name)
                 .role(role)
                 .build();
-        
-        return userRepository.save(user);
     }
 
     public Optional<User> getUserByEmail(String email) {
@@ -80,16 +87,16 @@ public class UserService {
 
     public User updateUser(String userId, String name, String role) {
         log.info("Updating user: {}", userId);
-        
+
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
             throw new RuntimeException("User not found");
         }
-        
+
         User user = userOpt.get();
         if (name != null) user.setName(name);
         if (role != null) user.setRole(role);
-        
+
         return userRepository.save(user);
     }
 
