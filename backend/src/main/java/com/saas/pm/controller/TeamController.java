@@ -33,6 +33,12 @@ public class TeamController {
     private JwtUtils jwtUtils;
 
     @Autowired
+    private com.saas.pm.service.EmailService emailService;
+
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:https://saas-grid-frontend.onrender.com}")
+    private String frontendUrl;
+
+    @Autowired
     public TeamController(UserService userService, 
                          UserRepository userRepository,
                          AuditLogRepository auditLogRepository) {
@@ -89,10 +95,20 @@ public class TeamController {
         try {
             User newUser = userService.createUser(
                     request.getEmail(),
-                    UUID.randomUUID().toString(), // Generate random password for now
+                    UUID.randomUUID().toString(),
                     request.getName(),
                     request.getRole() != null ? request.getRole() : "DEVELOPER"
             );
+
+            String inviteLink = frontendUrl + "/login";
+
+            String emailBody = "Hi " + request.getName() + ",\n\n"
+                    + "You've been invited to join the team on SaaS Grid.\n\n"
+                    + "Click below and sign in with Google using this email address (" + request.getEmail() + ") to join:\n"
+                    + inviteLink;
+
+            emailService.sendEmail(request.getEmail(), "You're invited to join SaaS Grid", emailBody);
+
             writeAuditLog("INVITE", newUser.getId(), "Invited " + newUser.getEmail());
             return ResponseEntity.ok(newUser);
         } catch (com.saas.pm.exception.PlanLimitExceededException e) {

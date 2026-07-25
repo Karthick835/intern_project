@@ -87,7 +87,7 @@ app:
   jwt:
     secret: 9a4f2c8d3e1b7f0a5c8e2d4b6a8f0e1c3d5b7a9e0f2c4a6b8d0e2f4a6b8c0d1e2f3
     expiration-ms: 86400000
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:https://saas-grid-frontend.onrender.com}
   ai:
     claude-api-key: ${CLAUDE_API_KEY:}
     use-mock: ${MOCK_AI:false}
