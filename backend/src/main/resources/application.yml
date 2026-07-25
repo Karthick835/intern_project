@@ -92,5 +92,9 @@ app:
     claude-api-key: ${CLAUDE_API_KEY:}
     use-mock: ${MOCK_AI:false}
 
+resend:
+  api:
+    key: ${RESEND_API_KEY}
+
 server:
   port: 8080
