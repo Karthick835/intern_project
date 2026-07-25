@@ -1,7 +1,6 @@
 package com.saas.pm.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -11,34 +10,35 @@ import java.util.Map;
 @Slf4j
 public class EmailService {
 
-    @Value("${resend.api.key:}")
-    private String resendApiKey;
+    private static final String SERVICE_ID = "service_sisc5vb";
+    private static final String TEMPLATE_ID = "template_36j9lnm";
+    private static final String PUBLIC_KEY = "FXBdpO4pwdqoXbh7F";
 
     private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://api.resend.com")
+            .baseUrl("https://api.emailjs.com/api/v1.0")
             .build();
 
+    /**
+     * Sends an invite email via EmailJS.
+     * 'to' = recipient email, 'subject' unused (fixed in template), 
+     * 'body' is repurposed here as the invite link text.
+     */
     public void sendEmail(String to, String subject, String body) {
-        log.info("📤 Sending email via Resend to: {}", to);
-
-        if (resendApiKey == null || resendApiKey.isBlank()) {
-            log.error("❌ Resend API key not configured!");
-            printToConsole(to, subject, body);
-            return;
-        }
+        log.info("📤 Sending email via EmailJS to: {}", to);
 
         try {
-            String htmlBody = buildHtmlEmail(subject, body);
-
             webClient.post()
-                    .uri("/emails")
-                    .header("Authorization", "Bearer " + resendApiKey)
+                    .uri("/email/send")
                     .header("Content-Type", "application/json")
                     .bodyValue(Map.of(
-                            "from", "SaaS Grid <onboarding@resend.dev>",
-                            "to", to,
-                            "subject", subject,
-                            "html", htmlBody
+                            "service_id", SERVICE_ID,
+                            "template_id", TEMPLATE_ID,
+                            "user_id", PUBLIC_KEY,
+                            "template_params", Map.of(
+                                    "email", to,
+                                    "to_name", to,
+                                    "invite_link", body
+                            )
                     ))
                     .retrieve()
                     .toBodilessEntity()
@@ -50,37 +50,6 @@ public class EmailService {
             log.error("❌ Failed to send email to {}: {}", to, e.getMessage());
             printToConsole(to, subject, body);
         }
-    }
-
-    private String buildHtmlEmail(String subject, String textBody) {
-        String htmlContent = textBody
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\r\n", "<br>")
-                .replace("\n", "<br>");
-
-        htmlContent = htmlContent.replaceAll(
-                "(http[s]?://[\\w.:/\\-?=&]+)",
-                "<div style=\"margin: 24px 0;\">"
-              + "  <a href=\"$1\" style=\"display: inline-block; background: #6366f1; color: #ffffff; font-weight: 700; padding: 12px 24px; border-radius: 10px; text-decoration: none;\">Accept Invitation</a>"
-              + "</div>"
-              + "<p style=\"font-size: 12px; color: #6b7280; margin-top: 16px;\">"
-              + "  If the button doesn't work, copy and paste this URL into your browser:<br>"
-              + "  <code style=\"background: #f3f4f6; padding: 6px 10px; border-radius: 6px; word-break: break-all; display: block; margin-top: 6px;\">$1</code>"
-              + "</p>"
-        );
-
-        return "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
-             + "<style>body{font-family:Arial,sans-serif;background:#f0f4f8;}"
-             + ".wrapper{max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;}"
-             + ".header{background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:36px;text-align:center;}"
-             + ".header h1{color:#fff;margin:0;}"
-             + ".body{padding:36px;color:#374151;font-size:15px;line-height:1.8;}"
-             + "</style></head><body>"
-             + "<div class='wrapper'><div class='header'><h1>⚡ SaaS Grid</h1></div>"
-             + "<div class='body'>" + htmlContent + "</div></div>"
-             + "</body></html>";
     }
 
     private void printToConsole(String to, String subject, String body) {

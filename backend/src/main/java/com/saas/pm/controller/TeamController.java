@@ -101,13 +101,7 @@ public class TeamController {
             );
 
             String inviteLink = frontendUrl + "/login";
-
-            String emailBody = "Hi " + request.getName() + ",\n\n"
-                    + "You've been invited to join the team on SaaS Grid.\n\n"
-                    + "Click below and sign in with Google using this email address (" + request.getEmail() + ") to join:\n"
-                    + inviteLink;
-
-            emailService.sendEmail(request.getEmail(), "You're invited to join SaaS Grid", emailBody);
+            emailService.sendEmail(request.getEmail(), "You're invited to join SaaS Grid", inviteLink);
 
             writeAuditLog("INVITE", newUser.getId(), "Invited " + newUser.getEmail());
             return ResponseEntity.ok(newUser);
