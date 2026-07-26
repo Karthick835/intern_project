@@ -22,6 +22,7 @@ import BillingSuccess from './pages/billing/BillingSuccess'
 import BillingCancel from './pages/billing/BillingCancel'
 import Docs from './pages/Docs'
 import DevOps from './pages/DevOps'
+import GitHubCallback from './pages/GitHubCallback'
 
 function App() {
   const [authToken, setAuthToken] = useState(() => {
@@ -157,6 +158,7 @@ function App() {
 
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/billing/cancel" element={<BillingCancel />} />
+        <Route path="/github/callback" element={<GitHubCallback />} />
 
         <Route
           path="/leaderboard"

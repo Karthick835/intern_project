@@ -10,6 +10,7 @@ import { getApiBase } from '../config'
 
 const DevOps = () => {
   const [activeTab, setActiveTab] = useState('pipelines') // 'repos' | 'commits' | 'pipelines'
+  const [githubConnected, setGithubConnected] = useState(false)
   const [repos, setRepos] = useState([])
   const [commits, setCommits] = useState([])
   const [pipelines, setPipelines] = useState([])
@@ -181,6 +182,14 @@ const DevOps = () => {
   useEffect(() => {
     fetchData()
   }, [])
+
+  useEffect(() => {
+    api.get('/github-auth/status').then(res => setGithubConnected(res.data.connected)).catch(() => {})
+  }, [])
+
+  const handleConnectGitHub = () => {
+    window.location.href = `${getApiBase()}/github-auth/login`
+  }
 
   // Auto-scroll terminal logs
   useEffect(() => {
@@ -499,6 +508,14 @@ const DevOps = () => {
             }`}
           >
             <Globe className="w-3.5 h-3.5" /> Real GitHub Webhooks
+          </button>
+          <button
+            onClick={() => setActiveTab('connect')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'connect' ? 'bg-white text-slate-900 shadow' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <GitBranch className="w-3.5 h-3.5" /> Connect GitHub
           </button>
         </div>
 
@@ -889,6 +906,30 @@ const DevOps = () => {
                 )}
               </div>
 
+            </motion.div>
+          )}
+
+          {activeTab === 'connect' && (
+            <motion.div
+              key="connect"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="p-6 space-y-4 text-left"
+            >
+              <h3 className="font-extrabold text-white text-base">GitHub Account Connection</h3>
+              {githubConnected ? (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-bold">
+                  ✓ GitHub is connected for this workspace
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnectGitHub}
+                  className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer"
+                >
+                  <GitBranch className="w-4 h-4" /> Connect GitHub Account
+                </button>
+              )}
             </motion.div>
           )}
 

@@ -96,5 +96,9 @@ resend:
   api:
     key: ${RESEND_API_KEY}
 
+github:
+  client-id: ${GITHUB_CLIENT_ID}
+  client-secret: ${GITHUB_CLIENT_SECRET}
+
 server:
   port: 8080
