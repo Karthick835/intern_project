@@ -15,12 +15,9 @@ spring:
           starttls:
             enable: true
             required: true
-
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_dummy}
-
-
 ---
 # Default Profile - H2 In-Memory Database (for easy development/testing)
 spring:
@@ -45,7 +42,6 @@ spring:
         format_sql: true
         # Enable multi-tenancy emulation on H2 via schema
         multiTenancy: SCHEMA
-
 # JWT and AI configurations
 app:
   jwt:
@@ -55,10 +51,11 @@ app:
   ai:
     claude-api-key: ${CLAUDE_API_KEY:}
     use-mock: ${MOCK_AI:false}
-
+github:
+  client-id: ${GITHUB_CLIENT_ID:}
+  client-secret: ${GITHUB_CLIENT_SECRET:}
 server:
   port: ${PORT:8080}
-
 ---
 # Postgres & Redis Profile - Production/Docker environment
 spring:
@@ -82,7 +79,6 @@ spring:
     redis:
       host: localhost
       port: 6379
-
 app:
   jwt:
     secret: 9a4f2c8d3e1b7f0a5c8e2d4b6a8f0e1c3d5b7a9e0f2c4a6b8d0e2f4a6b8c0d1e2f3
@@ -91,14 +87,11 @@ app:
   ai:
     claude-api-key: ${CLAUDE_API_KEY:}
     use-mock: ${MOCK_AI:false}
-
 resend:
   api:
     key: ${RESEND_API_KEY:}
-
 github:
   client-id: ${GITHUB_CLIENT_ID:}
   client-secret: ${GITHUB_CLIENT_SECRET:}
-
 server:
   port: ${PORT:8080}
