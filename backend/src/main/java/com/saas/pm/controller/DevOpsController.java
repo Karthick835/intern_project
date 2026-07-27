@@ -21,6 +21,11 @@ import java.util.regex.Pattern;
 
 import com.saas.pm.model.DevOpsRepo;
 import com.saas.pm.repository.DevOpsRepoRepository;
+import com.saas.pm.repository.TenantRepository;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 @RestController
 @RequestMapping("/api/devops")
@@ -115,22 +120,94 @@ public class DevOpsController {
         return ResponseEntity.ok(repo);
     }
 
+    @Autowired
+    private TenantRepository tenantRepository;
+
+    @Autowired
+    private DataSource dataSource;
+
+    private String getGitHubToken(String tenantId) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT github_access_token FROM public.tenants WHERE id = ?")) {
+            ps.setString(1, tenantId);
+            var rs = ps.executeQuery();
+            if (rs.next()) return rs.getString("github_access_token");
+            return null;
+        } catch (SQLException e) {
+            log.error("Failed to fetch GitHub token", e);
+            return null;
+        }
+    }
+
     @GetMapping("/repos/{repoName}/files")
     public ResponseEntity<Map<String, Object>> getRepoFiles(@PathVariable String repoName) {
-        List<Map<String, String>> files = Arrays.asList(
-            Map.of("path", "README.md", "type", "doc", "content", "# " + repoName + "\n\nPrimary source code repository for workspace service.\n\n## Getting Started\n\n```bash\ngit clone https://github.com/workspace/" + repoName + ".git\ncd " + repoName + "\nnpm install\nnpm run dev\n```"),
-            Map.of("path", "src/App.jsx", "type", "code", "content", "import React from 'react'\n\nexport default function App() {\n  return (\n    <div className=\"p-6 max-w-4xl mx-auto\">\n      <h1 className=\"text-2xl font-bold\">" + repoName + " App</h1>\n      <p>Microservice active and connected.</p>\n    </div>\n  )\n}"),
-            Map.of("path", "package.json", "type", "config", "content", "{\n  \"name\": \"" + repoName + "\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\"\n  }\n}"),
-            Map.of("path", "Dockerfile", "type", "docker", "content", "FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 8080\nCMD [\"npm\", \"run\", \"dev\"]")
-        );
+        String tenantId = TenantContext.getCurrentTenant();
+        String githubToken = getGitHubToken(tenantId);
 
-        List<String> branches = Arrays.asList("main", "staging", "feature/auth-guard", "patch/v1.1");
+        if (githubToken == null) {
+            return ResponseEntity.status(400).body(Map.of("error", "GitHub not connected for this workspace. Please connect GitHub first."));
+        }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("repoName", repoName);
-        result.put("branches", branches);
-        result.put("files", files);
-        return ResponseEntity.ok(result);
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setBearerAuth(githubToken);
+            headers.set("Accept", "application/vnd.github+json");
+            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+
+            // Step 1: find out whose account this token belongs to
+            org.springframework.http.ResponseEntity<Map> userResp = restTemplate.exchange(
+                    "https://api.github.com/user", org.springframework.http.HttpMethod.GET, entity, Map.class);
+            String owner = (String) userResp.getBody().get("login");
+
+            // Step 2: fetch real repo contents from GitHub
+            org.springframework.http.ResponseEntity<List> contentsResp = restTemplate.exchange(
+                    "https://api.github.com/repos/" + owner + "/" + repoName + "/contents/",
+                    org.springframework.http.HttpMethod.GET, entity, List.class);
+
+            List<Map<String, Object>> rawFiles = contentsResp.getBody();
+            List<Map<String, String>> files = new ArrayList<>();
+
+            for (Map<String, Object> f : rawFiles) {
+                String path = (String) f.get("path");
+                String type = (String) f.get("type"); // "file" or "dir"
+                String content = "";
+
+                if ("file".equals(type)) {
+                    try {
+                        org.springframework.http.ResponseEntity<Map> fileResp = restTemplate.exchange(
+                                "https://api.github.com/repos/" + owner + "/" + repoName + "/contents/" + path,
+                                org.springframework.http.HttpMethod.GET, entity, Map.class);
+                        String base64Content = (String) fileResp.getBody().get("content");
+                        if (base64Content != null) {
+                            content = new String(java.util.Base64.getMimeDecoder().decode(base64Content));
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                files.add(Map.of("path", path, "type", type, "content", content));
+            }
+
+            // Step 3: fetch real branches
+            org.springframework.http.ResponseEntity<List> branchesResp = restTemplate.exchange(
+                    "https://api.github.com/repos/" + owner + "/" + repoName + "/branches",
+                    org.springframework.http.HttpMethod.GET, entity, List.class);
+            List<String> branches = new ArrayList<>();
+            for (Object b : branchesResp.getBody()) {
+                branches.add((String) ((Map) b).get("name"));
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("repoName", repoName);
+            result.put("branches", branches);
+            result.put("files", files);
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            log.error("Failed to fetch real GitHub repo files for {}", repoName, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch repo from GitHub: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/commits")
