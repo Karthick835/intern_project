@@ -54,6 +54,16 @@ public class DevOpsController {
     // In-memory list to track live pipelines
     private final List<Map<String, Object>> pipelines = new ArrayList<>();
 
+    private String resolveTenantId(String headerTenant) {
+        String tenantId = TenantContext.getCurrentTenant();
+        if (tenantId != null && !tenantId.isBlank()
+                && !tenantId.equalsIgnoreCase("default")
+                && !tenantId.equalsIgnoreCase("public")) {
+            return tenantId;
+        }
+        return headerTenant;
+    }
+
     private void broadcastActivity(String content, String actorName) {
         if (messagingTemplate == null) return;
         try {
@@ -71,7 +81,7 @@ public class DevOpsController {
 
     @GetMapping("/repos")
     public ResponseEntity<List<DevOpsRepo>> getRepos(@RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant) {
-        String tenantId = headerTenant != null ? headerTenant : TenantContext.getCurrentTenant();
+        String tenantId = resolveTenantId(headerTenant);
         if (tenantId == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -84,7 +94,7 @@ public class DevOpsController {
     public ResponseEntity<?> createRepo(
             @RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant,
             @RequestBody Map<String, String> body) {
-        String tenantId = headerTenant != null ? headerTenant : TenantContext.getCurrentTenant();
+        String tenantId = resolveTenantId(headerTenant);
         if (tenantId == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -237,7 +247,7 @@ public class DevOpsController {
 
     @GetMapping("/commits")
     public ResponseEntity<List<DevOpsCommit>> getCommits(@RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant) {
-        String tenantId = headerTenant != null ? headerTenant : TenantContext.getCurrentTenant();
+        String tenantId = resolveTenantId(headerTenant);
         if (tenantId == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -258,7 +268,7 @@ public class DevOpsController {
             @RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant,
             @RequestBody Map<String, String> body) {
 
-        String tenantId = headerTenant != null ? headerTenant : TenantContext.getCurrentTenant();
+        String tenantId = resolveTenantId(headerTenant);
         if (tenantId == null) {
             return ResponseEntity.badRequest().build();
         }
