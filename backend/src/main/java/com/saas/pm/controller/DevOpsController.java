@@ -109,6 +109,35 @@ public class DevOpsController {
             return ResponseEntity.status(403).build();
         }
 
+        String githubToken = getGitHubToken(tenantId);
+        if (githubToken != null) {
+            try {
+                org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.setBearerAuth(githubToken);
+                headers.set("Accept", "application/vnd.github+json");
+                org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+
+                String owner = "";
+                try {
+                    org.springframework.http.ResponseEntity<Map> userResp = restTemplate.exchange(
+                            "https://api.github.com/user", org.springframework.http.HttpMethod.GET, entity, Map.class);
+                    owner = (String) userResp.getBody().get("login");
+                } catch (Exception ignored) {}
+
+                if (!owner.isBlank()) {
+                    restTemplate.exchange(
+                            "https://api.github.com/repos/" + owner + "/" + repo.getName(),
+                            org.springframework.http.HttpMethod.DELETE,
+                            entity,
+                            Void.class);
+                    log.info("Removed GitHub repo {} from account {}", repo.getName(), owner);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to delete GitHub repo {} (continuing with local delete)", repo.getName(), e);
+            }
+        }
+
         commitRepository.deleteByRepoNameAndTenantId(repo.getName(), tenantId);
         repoRepository.delete(repo);
         broadcastActivity("deleted the code repository: " + repo.getName(), null);
