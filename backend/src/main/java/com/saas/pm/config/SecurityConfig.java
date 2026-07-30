@@ -85,8 +85,8 @@ public class SecurityConfig {
             "http://*"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID", "Cache-Control"));
-        configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID", "Authorization"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID", "X-Claude-API-Key", "Cache-Control"));
+        configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID", "Authorization", "X-Claude-API-Key"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
