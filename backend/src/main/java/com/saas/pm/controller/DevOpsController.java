@@ -97,11 +97,36 @@ public class DevOpsController {
         String lang = body.getOrDefault("lang", "Other");
         String desc = body.getOrDefault("desc", "");
 
-        // Check duplicate
         List<DevOpsRepo> existing = repoRepository.findByTenantId(tenantId);
         for (DevOpsRepo r : existing) {
             if (r.getName().equalsIgnoreCase(name.trim())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Repository name already exists"));
+            }
+        }
+
+        // Try to create the real repo on GitHub if connected
+        String githubToken = getGitHubToken(tenantId);
+        if (githubToken != null) {
+            try {
+                org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.setBearerAuth(githubToken);
+                headers.set("Accept", "application/vnd.github+json");
+
+                Map<String, Object> createRepoBody = new HashMap<>();
+                createRepoBody.put("name", name.trim());
+                createRepoBody.put("description", desc);
+                createRepoBody.put("private", false);
+                createRepoBody.put("auto_init", true);
+
+                org.springframework.http.HttpEntity<Map<String, Object>> entity =
+                        new org.springframework.http.HttpEntity<>(createRepoBody, headers);
+
+                restTemplate.postForEntity("https://api.github.com/user/repos", entity, Map.class);
+                log.info("Real GitHub repo created: {}", name);
+
+            } catch (Exception e) {
+                log.error("Failed to create real GitHub repo (continuing with local record anyway)", e);
             }
         }
 
