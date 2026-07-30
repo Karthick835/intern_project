@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   GitBranch, GitCommit, GitPullRequest, Terminal, Play, CheckCircle, 
   XCircle, Loader, Cpu, Plus, Code, RefreshCw, Layers, ArrowUpRight, Link, X,
-  Globe, Copy, Check, Zap, ShieldCheck, Sparkles
+  Globe, Copy, Check, Zap, ShieldCheck, Sparkles, Trash2
 } from 'lucide-react'
 import axios from 'axios'
 import { getApiBase } from '../config'
@@ -24,6 +24,7 @@ const DevOps = () => {
   const [newRepoLang, setNewRepoLang] = useState('React / Vite')
   const [newRepoDesc, setNewRepoDesc] = useState('')
   const [creatingRepo, setCreatingRepo] = useState(false)
+  const [deletingRepoId, setDeletingRepoId] = useState(null)
   const [repoError, setRepoError] = useState('')
   
   // Simulation Form states
@@ -327,6 +328,20 @@ const DevOps = () => {
       setRepoError(err.response?.data?.error || 'Failed to create repository')
     } finally {
       setCreatingRepo(false)
+    }
+  }
+
+  const handleDeleteRepo = async (repo) => {
+    if (!window.confirm(`Delete repository "${repo.name}"?`)) return
+    setDeletingRepoId(repo.id)
+    try {
+      await api.delete(`/devops/repos/${repo.id}`)
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      setRepoError(err.response?.data?.error || 'Failed to delete repository')
+    } finally {
+      setDeletingRepoId(null)
     }
   }
 
@@ -760,16 +775,27 @@ const DevOps = () => {
                           Inspect Code & Files
                         </button>
 
-                        <button
-                          onClick={() => {
-                            setPipelineRepo(repo.name)
-                            setActiveTab('pipelines')
-                            handleRunPipeline()
-                          }}
-                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer transition"
-                        >
-                          <Play className="w-3 h-3 text-emerald-400" /> Run Pipeline
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setPipelineRepo(repo.name)
+                              setActiveTab('pipelines')
+                              handleRunPipeline()
+                            }}
+                            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer transition"
+                          >
+                            <Play className="w-3 h-3 text-emerald-400" /> Run Pipeline
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteRepo(repo)}
+                            disabled={deletingRepoId === repo.id}
+                            className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer transition"
+                          >
+                            {deletingRepoId === repo.id ? <Loader className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

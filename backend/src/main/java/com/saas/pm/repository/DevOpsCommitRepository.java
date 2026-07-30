@@ -9,4 +9,5 @@ import java.util.List;
 public interface DevOpsCommitRepository extends JpaRepository<DevOpsCommit, String> {
     List<DevOpsCommit> findByTenantId(String tenantId);
     List<DevOpsCommit> findByTaskId(String taskId);
+    void deleteByRepoNameAndTenantId(String repoName, String tenantId);
 }

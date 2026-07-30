@@ -90,6 +90,32 @@ public class DevOpsController {
         return ResponseEntity.ok(list);
     }
 
+    @DeleteMapping("/repos/{repoId}")
+    public ResponseEntity<?> deleteRepo(
+            @PathVariable String repoId,
+            @RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant) {
+        String tenantId = resolveTenantId(headerTenant);
+        if (tenantId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Optional<DevOpsRepo> repoOpt = repoRepository.findById(repoId);
+        if (repoOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        DevOpsRepo repo = repoOpt.get();
+        if (!Objects.equals(repo.getTenantId(), tenantId)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        commitRepository.deleteByRepoNameAndTenantId(repo.getName(), tenantId);
+        repoRepository.delete(repo);
+        broadcastActivity("deleted the code repository: " + repo.getName(), null);
+
+        return ResponseEntity.ok(Map.of("message", "Repository deleted", "repoName", repo.getName()));
+    }
+
     @PostMapping("/repos")
     public ResponseEntity<?> createRepo(
             @RequestHeader(value = "X-Tenant-ID", required = false) String headerTenant,
