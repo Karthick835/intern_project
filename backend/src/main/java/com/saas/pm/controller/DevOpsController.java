@@ -389,9 +389,62 @@ public class DevOpsController {
         return ResponseEntity.ok(resp);
     }
 
-    @GetMapping("/pipelines")
-    public ResponseEntity<List<Map<String, Object>>> getPipelines() {
-        return ResponseEntity.ok(pipelines);
+    @GetMapping("/repos/{repoName}/pipelines")
+    public ResponseEntity<?> getPipelines(@PathVariable String repoName) {
+        String tenantId = TenantContext.getCurrentTenant();
+        String githubToken = getGitHubToken(tenantId);
+
+        if (githubToken == null) {
+            return ResponseEntity.status(400).body(Map.of("error", "GitHub not connected"));
+        }
+
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setBearerAuth(githubToken);
+            headers.set("Accept", "application/vnd.github+json");
+            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+
+            // Get the owner (whose GitHub account this is)
+            org.springframework.http.ResponseEntity<Map> userResp = restTemplate.exchange(
+                    "https://api.github.com/user", org.springframework.http.HttpMethod.GET, entity, Map.class);
+            String owner = (String) userResp.getBody().get("login");
+
+            // Fetch real workflow runs from GitHub Actions
+            org.springframework.http.ResponseEntity<Map> runsResp = restTemplate.exchange(
+                    "https://api.github.com/repos/" + owner + "/" + repoName + "/actions/runs?per_page=10",
+                    org.springframework.http.HttpMethod.GET, entity, Map.class);
+
+            Map<String, Object> runsData = runsResp.getBody();
+            List<Map<String, Object>> workflowRuns = (List<Map<String, Object>>) runsData.get("workflow_runs");
+
+            List<Map<String, Object>> pipelineList = new ArrayList<>();
+            for (Map<String, Object> run : workflowRuns) {
+                long runId = ((Number) run.get("id")).longValue();
+                String name = (String) run.get("name");
+                String status = (String) run.get("status"); // queued, in_progress, completed
+                String conclusion = (String) run.get("conclusion"); // success, failure, neutral, cancelled, null if not completed
+                String createdAt = (String) run.get("created_at");
+                String runNumber = String.valueOf(run.get("run_number"));
+
+                String displayStatus = conclusion != null ? conclusion : status;
+
+                Map<String, Object> pipeline = new HashMap<>();
+                pipeline.put("id", String.valueOf(runId));
+                pipeline.put("name", name);
+                pipeline.put("status", displayStatus);
+                pipeline.put("timestamp", createdAt);
+                pipeline.put("runNumber", runNumber);
+
+                pipelineList.add(pipeline);
+            }
+
+            return ResponseEntity.ok(Map.of("pipelines", pipelineList, "repoName", repoName));
+
+        } catch (Exception e) {
+            log.error("Failed to fetch real GitHub Actions runs for {}", repoName, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch pipelines: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/pipeline/run")
