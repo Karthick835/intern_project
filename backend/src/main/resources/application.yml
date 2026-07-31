@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: default
+    active: ${SPRING_PROFILES_ACTIVE:default}
   application:
     name: pm-tool
   mail:
@@ -63,10 +63,10 @@ spring:
     activate:
       on-profile: postgres
   datasource:
-    url: jdbc:postgresql://localhost:5432/saas_pm
+    url: ${SPRING_DATASOURCE_URL}
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
