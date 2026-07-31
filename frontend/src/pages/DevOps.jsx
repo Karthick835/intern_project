@@ -37,7 +37,7 @@ const DevOps = () => {
 
   // Pipeline Run states
   const [selectedPipeline, setSelectedPipeline] = useState(null)
-  const [pipelineRepo, setPipelineRepo] = useState('auth-service')
+  const [pipelineRepo, setPipelineRepo] = useState('')
   const [pipelineBranch, setPipelineBranch] = useState('main')
   const [runningPipelineId, setRunningPipelineId] = useState(null)
   const [pipelineStage, setPipelineStage] = useState(0) // 0 to 5
@@ -158,17 +158,19 @@ const DevOps = () => {
   // Load DevOps data
   const fetchData = async () => {
     try {
-      const [reposRes, commitsRes, pipesRes, tasksRes, usersRes] = await Promise.all([
+      const [reposRes, commitsRes, tasksRes, usersRes] = await Promise.all([
         api.get('/devops/repos'),
         api.get('/devops/commits'),
-        api.get('/devops/pipelines'),
         api.get('/tasks'),
         api.get('/team')
       ])
       
       setRepos(reposRes.data)
+      // Auto-select first repo for pipeline view if none selected yet
+      if (reposRes.data.length > 0 && !pipelineRepo) {
+        setPipelineRepo(reposRes.data[0].name)
+      }
       setCommits(commitsRes.data)
-      setPipelines(pipesRes.data)
       setTasks(tasksRes.data)
       setUsers(usersRes.data)
       
@@ -180,6 +182,18 @@ const DevOps = () => {
     }
   }
 
+  // Load pipelines for a specific repo from GitHub Actions
+  const fetchPipelines = async (repoName) => {
+    if (!repoName) return
+    try {
+      const res = await api.get(`/devops/repos/${repoName}/pipelines`)
+      setPipelines(res.data?.pipelines || [])
+    } catch (err) {
+      console.error('Failed to load pipelines for', repoName, err)
+      setPipelines([])
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -187,6 +201,11 @@ const DevOps = () => {
   useEffect(() => {
     api.get('/github-auth/status').then(res => setGithubConnected(res.data.connected)).catch(() => {})
   }, [])
+
+  // Re-fetch pipelines when the selected repo changes
+  useEffect(() => {
+    if (pipelineRepo) fetchPipelines(pipelineRepo)
+  }, [pipelineRepo])
 
   const handleConnectGitHub = () => {
     window.location.href = `${getApiBase()}/github-auth/login`
