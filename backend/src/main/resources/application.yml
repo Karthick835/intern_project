@@ -70,15 +70,11 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: none # Schemas managed dynamically or via migration scripts
+      ddl-auto: update # Let Hibernate auto-create/update tables on fresh DB
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-  data:
-    redis:
-      host: localhost
-      port: 6379
 app:
   jwt:
     secret: 9a4f2c8d3e1b7f0a5c8e2d4b6a8f0e1c3d5b7a9e0f2c4a6b8d0e2f4a6b8c0d1e2f3
