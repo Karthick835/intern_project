@@ -10,6 +10,7 @@ import com.saas.pm.repository.SprintRepository;
 import com.saas.pm.repository.TaskRepository;
 import com.saas.pm.repository.UserRepository;
 import com.saas.pm.repository.AuditLogRepository;
+import com.saas.pm.service.SprintService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,18 +30,21 @@ public class DashboardController {
     private final SprintRepository sprintRepository;
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
+    private final SprintService sprintService;
 
     @Autowired
     public DashboardController(ProjectRepository projectRepository,
                               TaskRepository taskRepository,
                               SprintRepository sprintRepository,
                               UserRepository userRepository,
-                              AuditLogRepository auditLogRepository) {
+                              AuditLogRepository auditLogRepository,
+                              SprintService sprintService) {
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.sprintRepository = sprintRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.sprintService = sprintService;
     }
 
     @GetMapping("/activity")
@@ -66,7 +70,7 @@ public class DashboardController {
         overview.put("totalProjects", projects.size());
         overview.put("activeProjects", projects.stream().filter(p -> "ACTIVE".equalsIgnoreCase(p.getStatus())).count());
         overview.put("totalTasks", tasks.size());
-        overview.put("completedTasks", tasks.stream().filter(t -> "DONE".equalsIgnoreCase(t.getStatus())).count());
+        overview.put("completedTasks", tasks.stream().filter(t -> sprintService.isCompletedTaskStatus(t.getStatus())).count());
         overview.put("totalSprints", sprints.size());
         overview.put("activeSprints", sprints.stream().filter(s -> "ACTIVE".equalsIgnoreCase(s.getStatus())).count());
         overview.put("totalTeamMembers", users.size());
@@ -112,7 +116,7 @@ public class DashboardController {
             long doneTasks = allTasks.stream()
                     .filter(t -> t.getSprint() != null
                             && t.getSprint().getId().equals(sprint.getId())
-                            && "DONE".equalsIgnoreCase(t.getStatus()))
+                            && sprintService.isCompletedTaskStatus(t.getStatus()))
                     .count();
             velocityData.put(sprint.getName(), (int) doneTasks);
         }
@@ -154,7 +158,7 @@ public class DashboardController {
         List<Task> overdue = tasks.stream()
                 .filter(t -> t.getDueDate() != null && 
                            t.getDueDate().isBefore(java.time.LocalDate.now()) && 
-                           !"DONE".equalsIgnoreCase(t.getStatus()))
+                           !sprintService.isCompletedTaskStatus(t.getStatus()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(overdue);
@@ -177,7 +181,7 @@ public class DashboardController {
             if (projectTasks.isEmpty()) continue;
             
             long completedTasks = projectTasks.stream()
-                    .filter(t -> "DONE".equalsIgnoreCase(t.getStatus()))
+                    .filter(t -> sprintService.isCompletedTaskStatus(t.getStatus()))
                     .count();
             
             int completionPercentage = (int) ((completedTasks * 100) / projectTasks.size());

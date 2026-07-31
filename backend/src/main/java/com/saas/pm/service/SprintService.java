@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -84,13 +86,24 @@ public class SprintService {
                      t.getId(), t.getTitle(), t.getStatus(), t.getTimeEstimate());
         }
 
-        List<Task> completedTasks = taskRepository.findBySprintIdAndStatus(sprintId, "DONE");
+        List<Task> completedTasks = allSprintTasks.stream()
+                .filter(task -> isCompletedTaskStatus(task.getStatus()))
+                .toList();
         int velocity = completedTasks.stream()
                 .mapToInt(t -> t.getTimeEstimate() != null ? t.getTimeEstimate() : 0)
                 .sum();
         
         log.info("Sprint {} velocity: {}", sprintId, velocity);
         return velocity;
+    }
+
+    public boolean isCompletedTaskStatus(String status) {
+        if (status == null) {
+            return false;
+        }
+
+        String normalizedStatus = status.trim().toUpperCase(Locale.ROOT);
+        return Set.of("DONE", "COMPLETED", "CLOSED", "ARCHIVED", "RESOLVED").contains(normalizedStatus);
     }
 
     public void deleteSprint(String sprintId) {

@@ -147,7 +147,7 @@ public class SprintController {
                 .mapToInt(t -> t.getTimeEstimate() != null ? t.getTimeEstimate() : 0)
                 .sum();
         int completedEstimate = sprintTasks.stream()
-                .filter(t -> "DONE".equalsIgnoreCase(t.getStatus()))
+                .filter(t -> sprintService.isCompletedTaskStatus(t.getStatus()))
                 .mapToInt(t -> t.getTimeEstimate() != null ? t.getTimeEstimate() : 0)
                 .sum();
         int remainingEstimate = totalEstimate - completedEstimate;
@@ -161,7 +161,7 @@ public class SprintController {
         result.put("remainingEstimate", remainingEstimate);
         result.put("completionPercentage", totalEstimate > 0 ? (completedEstimate * 100) / totalEstimate : 0);
         result.put("taskCount", sprintTasks.size());
-        result.put("completedTaskCount", sprintTasks.stream().filter(t -> "DONE".equalsIgnoreCase(t.getStatus())).count());
+        result.put("completedTaskCount", sprintTasks.stream().filter(t -> sprintService.isCompletedTaskStatus(t.getStatus())).count());
 
         return ResponseEntity.ok(result);
     }
