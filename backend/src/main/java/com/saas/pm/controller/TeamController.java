@@ -87,12 +87,19 @@ public class TeamController {
     @PostMapping("/invite")
     public ResponseEntity<?> inviteTeamMember(@RequestBody InviteRequest request) {
         log.info("Inviting team member: {}", request.getEmail());
-        
+
+        String currentTenantId = TenantContext.getCurrentTenant();
+        if (currentTenantId == null || currentTenantId.equals("public")) {
+            return ResponseEntity.badRequest().body("Invalid tenant context for invitation");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("User already exists");
         }
 
         try {
+            TenantContext.setCurrentTenant(currentTenantId);
+
             User newUser = userService.createUser(
                     request.getEmail(),
                     UUID.randomUUID().toString(),
@@ -101,14 +108,23 @@ public class TeamController {
             );
 
             String inviteLink = frontendUrl + "/login";
-            emailService.sendEmail(request.getEmail(), "You're invited to join SaaS Grid", inviteLink);
+
+            String emailBody = "Hi " + request.getName() + ",\n\n"
+                    + "You've been invited to join the team on SaaS Grid.\n\n"
+                    + "Click below and sign in with Google using this email address (" + request.getEmail() + ") to join:\n"
+                    + inviteLink;
+
+            emailService.sendEmail(request.getEmail(), "You're invited to join SaaS Grid", emailBody);
 
             writeAuditLog("INVITE", newUser.getId(), "Invited " + newUser.getEmail());
             return ResponseEntity.ok(newUser);
+
         } catch (com.saas.pm.exception.PlanLimitExceededException e) {
             throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } finally {
+            TenantContext.clear();
         }
     }
 
