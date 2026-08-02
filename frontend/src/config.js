@@ -4,7 +4,7 @@ export const getApiBase = () => {
   }
   if (typeof window !== 'undefined') {
     if (window.location.hostname.includes('onrender.com')) {
-      return 'https://saas-grid-backend.onrender.com/api'
+      return 'https://saas-grid-backend-edpn.onrender.com/api'
     }
     if (window.location.port === '8888' || window.location.port === '5173' || window.location.hostname === 'localhost') {
       return 'http://localhost:8080/api'
@@ -19,7 +19,7 @@ export const getWsBase = () => {
   }
   if (typeof window !== 'undefined') {
     if (window.location.hostname.includes('onrender.com')) {
-      return 'wss://saas-grid-backend.onrender.com/ws-native'
+      return 'wss://saas-grid-backend-edpn.onrender.com/ws-native'
     }
     const isDev = window.location.port === '8888' || window.location.port === '5173' || window.location.hostname === 'localhost'
     const host = isDev ? 'localhost:8080' : window.location.host
