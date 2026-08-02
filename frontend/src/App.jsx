@@ -6,6 +6,7 @@ import Register from './pages/auth/Register'
 import SetupWorkspace from './pages/auth/SetupWorkspace'
 import AcceptInvite from './pages/auth/AcceptInvite'
 import JoinRequest from './pages/auth/JoinRequest'
+import AcceptInviteToken from './pages/AcceptInvite'
 import Dashboard from './pages/Dashboard'
 import KanbanBoard from './pages/KanbanBoard'
 import SprintBoard from './pages/SprintBoard'
@@ -43,6 +44,7 @@ function App() {
         <Route path="/setup" element={<SetupWorkspace setAuthToken={setAuthToken} />} />
         <Route path="/join/invite" element={<AcceptInvite setAuthToken={setAuthToken} />} />
         <Route path="/join/request" element={<JoinRequest />} />
+        <Route path="/accept-invite" element={<AcceptInviteToken />} />
 
         {/* Protected Routes wrapped in AppShell */}
         <Route 
