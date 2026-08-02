@@ -270,4 +270,38 @@ public class TeamController {
                 "token", newToken
         ));
     }
+
+    @PostMapping("/invitations/accept")
+    public ResponseEntity<?> acceptInvitation(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+
+        if (token == null || token.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing invitation token"));
+        }
+
+        try {
+            // Find the invitation by token
+            Invitation invitation = invitationRepository.findByToken(token)
+                    .orElse(null);
+
+            if (invitation == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Invalid or expired invitation token"));
+            }
+
+            if ("ACCEPTED".equals(invitation.getStatus())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invitation already accepted"));
+            }
+
+            // Mark invitation as accepted
+            invitation.setStatus("ACCEPTED");
+            invitationRepository.save(invitation);
+
+            log.info("Invitation accepted for email: {}", invitation.getEmail());
+            return ResponseEntity.ok(Map.of("message", "Invitation accepted successfully", "tenantId", invitation.getTenantId()));
+
+        } catch (Exception e) {
+            log.error("Error accepting invitation", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to accept invitation: " + e.getMessage()));
+        }
+    }
 }
