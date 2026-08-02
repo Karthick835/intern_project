@@ -21,7 +21,8 @@ const AcceptInvite = () => {
 
     if (!authToken) {
       setStatus('Please sign in first. Redirecting to login...')
-      setTimeout(() => navigate('/login'), 2000)
+      // Redirect to login with a return path
+      setTimeout(() => navigate(`/login?redirect=/accept-invite?token=${token}`), 2000)
       return
     }
 
