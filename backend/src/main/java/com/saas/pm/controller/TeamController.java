@@ -4,8 +4,10 @@ import com.saas.pm.config.JwtUtils;
 import com.saas.pm.config.TenantContext;
 import com.saas.pm.dto.InviteRequest;
 import com.saas.pm.model.AuditLog;
+import com.saas.pm.model.Invitation;
 import com.saas.pm.model.User;
 import com.saas.pm.repository.AuditLogRepository;
+import com.saas.pm.repository.InvitationRepository;
 import com.saas.pm.repository.UserRepository;
 import com.saas.pm.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,9 @@ public class TeamController {
 
     @Autowired
     private com.saas.pm.service.EmailService emailService;
+
+    @Autowired
+    private InvitationRepository invitationRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.frontend-url:https://saas-grid-frontend.onrender.com}")
     private String frontendUrl;
@@ -100,6 +105,7 @@ public class TeamController {
         try {
             TenantContext.setCurrentTenant(currentTenantId);
 
+            // Create the user in the workspace
             User newUser = userService.createUser(
                     request.getEmail(),
                     UUID.randomUUID().toString(),
@@ -107,7 +113,20 @@ public class TeamController {
                     request.getRole() != null ? request.getRole() : "DEVELOPER"
             );
 
-            String inviteLink = frontendUrl + "/login";
+            // Create an Invitation record with a unique token
+            String invitationToken = UUID.randomUUID().toString();
+            Invitation invitation = Invitation.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email(request.getEmail())
+                    .tenantId(currentTenantId)
+                    .token(invitationToken)
+                    .role(request.getRole() != null ? request.getRole() : "DEVELOPER")
+                    .status("PENDING")
+                    .build();
+            invitationRepository.save(invitation);
+
+            // Send email with the token in the link
+            String inviteLink = frontendUrl + "/accept-invite?token=" + invitationToken;
 
             String emailBody = "Hi " + request.getName() + ",\n\n"
                     + "You've been invited to join the team on SaaS Grid.\n\n"
